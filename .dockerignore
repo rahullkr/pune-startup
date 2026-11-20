@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.env.*
+*.local
+node_modules
+dist
+build
+target
+__pycache__
+*.pyc
+.venv
+venv
+*.log
+docs
+ai

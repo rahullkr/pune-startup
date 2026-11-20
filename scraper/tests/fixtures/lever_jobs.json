@@ -1,0 +1,35 @@
+[
+  {
+    "id": "lever-1001",
+    "text": "Frontend Engineer",
+    "hostedUrl": "https://jobs.lever.co/zetasoft/lever-1001",
+    "applyUrl": "https://jobs.lever.co/zetasoft/lever-1001/apply",
+    "createdAt": 1762490000000,
+    "descriptionPlain": "Build product interfaces with React, TypeScript, and Tailwind CSS.",
+    "categories": {
+      "location": "Pune, India",
+      "commitment": "Full-time",
+      "workplaceType": "remote",
+      "team": "Engineering",
+      "allLocations": [
+        "Pune, India"
+      ]
+    },
+    "salaryRange": {
+      "min": 1200000,
+      "max": 1800000,
+      "currency": "INR",
+      "interval": "per-year-salary"
+    },
+    "tags": [
+      "React",
+      "TypeScript"
+    ],
+    "lists": [
+      {
+        "text": "Requirements",
+        "content": "<li>Three years of frontend experience</li><li>Strong CSS skills</li>"
+      }
+    ]
+  }
+]

@@ -1,0 +1,52 @@
+# --- Environment ---
+.env
+.env.local
+*.local
+
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+backend/.mvn/
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Data / logs ---
+*.log
+*.pid
+
+# --- Documentation and generated notes ---
+docs/
+*.md
+!/README.md
+*.docx
+STACK_VERSIONS.txt
+prompt.txt

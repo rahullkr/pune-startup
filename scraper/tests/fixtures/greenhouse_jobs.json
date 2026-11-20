@@ -1,0 +1,37 @@
+{
+  "jobs": [
+    {
+      "id": 4123456,
+      "title": "Backend Engineer",
+      "absolute_url": "https://boards.greenhouse.io/zetasoft/jobs/4123456",
+      "first_published": "2026-11-10T06:30:00Z",
+      "updated_at": "2026-11-12T06:30:00Z",
+      "location": {
+        "name": "Pune, Maharashtra"
+      },
+      "content": "&lt;p&gt;Build and operate Java services with Spring Boot and PostgreSQL.&lt;/p&gt;",
+      "metadata": [
+        {
+          "name": "Employment Type",
+          "value": "Full-time"
+        },
+        {
+          "name": "Workplace Type",
+          "value": "Hybrid"
+        },
+        {
+          "name": "Skills",
+          "value": "Java, Kotlin, Spring Boot"
+        },
+        {
+          "name": "Salary Range",
+          "value": "₹12,00,000 - ₹18,00,000 per year"
+        },
+        {
+          "name": "Experience",
+          "value": "2-4 years"
+        }
+      ]
+    }
+  ]
+}
