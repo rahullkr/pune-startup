@@ -53,7 +53,7 @@ jobs:
               try:
                   sources = request(
                       f"{base}/admin/scraping-sources"
-                      "?enabled=true&permissionStatus=APPROVED&size=100"
+                      "?enabled=true&permissionStatus=APPROVED&size=50"
                   )
                   break
               except Exception as exc:
