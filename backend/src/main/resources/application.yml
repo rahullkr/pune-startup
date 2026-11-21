@@ -72,6 +72,7 @@ app:
     default-page-size: 20
   jobs:
     fresher-max-experience-years: 1.0
+    max-age-days: ${JOB_MAX_AGE_DAYS:15}
   ingestion:
     scheduler:
       enabled: ${INGESTION_SCHEDULER_ENABLED:true}

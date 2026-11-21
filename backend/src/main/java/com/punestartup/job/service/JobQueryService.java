@@ -28,6 +28,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -48,17 +49,20 @@ public class JobQueryService {
     private final JobSummaryMapper summaryMapper;
     private final int maxPageSize;
     private final BigDecimal fresherMaxExperienceYears;
+    private final int maxAgeDays;
 
     public JobQueryService(JobRepository jobRepository,
                            JobSourceRepository jobSourceRepository,
                            JobSummaryMapper summaryMapper,
                            @Value("${app.search.max-page-size}") int maxPageSize,
-                           @Value("${app.jobs.fresher-max-experience-years}") BigDecimal fresherMaxExperienceYears) {
+                           @Value("${app.jobs.fresher-max-experience-years}") BigDecimal fresherMaxExperienceYears,
+                           @Value("${app.jobs.max-age-days}") int maxAgeDays) {
         this.jobRepository = jobRepository;
         this.jobSourceRepository = jobSourceRepository;
         this.summaryMapper = summaryMapper;
         this.maxPageSize = maxPageSize;
         this.fresherMaxExperienceYears = fresherMaxExperienceYears;
+        this.maxAgeDays = maxAgeDays;
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +75,7 @@ public class JobQueryService {
     public JobDetailResponse getJobDetail(UUID jobId) {
         Job job = jobRepository.findById(jobId)
                 .filter(found -> found.getStatus() == JobStatus.ACTIVE)
+                .filter(this::isFresh)
                 .filter(found -> found.getCompany() != null
                         && found.getCompany().getRecordStatus() == RecordStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
@@ -127,6 +132,9 @@ public class JobQueryService {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("status"), JobStatus.ACTIVE));
+            Expression<Instant> postedAt = cb.coalesce(root.get("firstPublishedAt"), root.get("createdAt"));
+            predicates.add(cb.greaterThanOrEqualTo(postedAt,
+                    Instant.now().minus(Duration.ofDays(maxAgeDays))));
 
             Join<Job, Company> company = root.join("company", JoinType.INNER);
             predicates.add(cb.equal(company.get("recordStatus"), RecordStatus.ACTIVE));
@@ -207,7 +215,6 @@ public class JobQueryService {
             }
 
             if (!Long.class.equals(query.getResultType()) && !long.class.equals(query.getResultType())) {
-                Expression<Instant> postedAt = cb.coalesce(root.get("firstPublishedAt"), root.get("createdAt"));
                 switch (request.sort()) {
                     case "newest" -> query.orderBy(cb.desc(postedAt));
                     case "oldest" -> query.orderBy(cb.asc(postedAt));
@@ -220,6 +227,11 @@ public class JobQueryService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private boolean isFresh(Job job) {
+        Instant postedAt = job.getFirstPublishedAt() != null ? job.getFirstPublishedAt() : job.getCreatedAt();
+        return postedAt != null && !postedAt.isBefore(Instant.now().minus(Duration.ofDays(maxAgeDays)));
     }
 
 }

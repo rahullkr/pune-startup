@@ -24,6 +24,7 @@ import com.punestartup.job.repository.JobSkillRepository;
 import com.punestartup.job.repository.JobSourceRepository;
 import com.punestartup.skill.repository.SkillRepository;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,7 @@ class JobApiIntegrationTest {
     private Job frontendJob;
     private Job expiredJob;
     private Job hiddenJob;
+    private Job oldJob;
 
     @BeforeEach
     void cleanAndSeed() {
@@ -118,6 +120,9 @@ class JobApiIntegrationTest {
         hiddenJob = job(hiddenCorp, hiddenLocation, "Hidden Engineer", JobStatus.ACTIVE, WorkMode.ONSITE,
                 "0", "1", "500000", "600000", "Job at an inactive company.",
                 Instant.now().minusSeconds(14400));
+        oldJob = job(zetaSoft, hinjewadi, "Ancient Engineer", JobStatus.ACTIVE, WorkMode.ONSITE,
+                "0", "1", "400000", "500000", "Old posting that must not be shown.",
+                Instant.now().minus(Duration.ofDays(30)));
 
         addSkill(backendJob, "java", SkillRequirementType.REQUIRED);
         addSkill(backendJob, "spring boot", SkillRequirementType.REQUIRED);
@@ -137,7 +142,7 @@ class JobApiIntegrationTest {
     }
 
     @Test
-    void searchJobsReturnsOnlyActiveJobsFromActiveCompanies() {
+    void searchJobsReturnsOnlyFreshActiveJobsFromActiveCompanies() {
         ResponseEntity<JsonNode> response = restTemplate.getForEntity("/api/v1/jobs", JsonNode.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -262,8 +267,9 @@ class JobApiIntegrationTest {
     }
 
     @Test
-    void jobDetailReturns404ForExpiredUnknownAndInactiveCompanyJobs() {
+    void jobDetailReturns404ForExpiredOldUnknownAndInactiveCompanyJobs() {
         assertNotFound("/api/v1/jobs/" + expiredJob.getId());
+        assertNotFound("/api/v1/jobs/" + oldJob.getId());
         assertNotFound("/api/v1/jobs/" + hiddenJob.getId());
         assertNotFound("/api/v1/jobs/" + UUID.randomUUID());
     }
