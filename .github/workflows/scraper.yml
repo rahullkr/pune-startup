@@ -81,3 +81,46 @@ jobs:
           SCRAPER_MAX_MESSAGES: "10"
           SCRAPER_IDLE_TIMEOUT_SECONDS: "180"
         run: python -m app.main
+      - name: Publish scraped jobs
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          base = os.environ["API_BASE_URL"].rstrip("/")
+          key = os.environ["ADMIN_API_KEY"]
+
+
+          def request(url, method="GET"):
+              req = urllib.request.Request(
+                  url,
+                  method=method,
+                  headers={"X-Admin-Key": key, "Accept": "application/json"},
+              )
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  return json.load(response)
+
+
+          published = 0
+          for page in range(20):
+              records = request(
+                  f"{base}/admin/scraped-records"
+                  f"?processingStatus=PROCESSED&size=50&page={page}"
+              )
+              for record in records.get("content", []):
+                  if record.get("jobStatus") != "NEEDS_REVIEW":
+                      continue
+                  try:
+                      request(f"{base}/admin/scraped-records/{record['id']}/publish", "POST")
+                      published += 1
+                  except urllib.error.HTTPError as exc:
+                      print(f"Could not publish record {record['id']}: HTTP {exc.code}")
+              if not records.get("hasNext"):
+                  break
+          print(f"Published {published} scraped jobs")
+          PY
