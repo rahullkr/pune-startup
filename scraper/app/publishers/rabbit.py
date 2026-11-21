@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 import time
 from typing import Any, Callable, Mapping
 
@@ -15,11 +16,13 @@ LOGGER = logging.getLogger(__name__)
 
 def _parameters(settings: Settings) -> pika.ConnectionParameters:
     credentials = pika.PlainCredentials(settings.rabbitmq_user, settings.rabbitmq_password)
+    ssl_options = pika.SSLOptions(ssl.create_default_context()) if settings.rabbitmq_ssl else None
     return pika.ConnectionParameters(
         host=settings.rabbitmq_host,
         port=settings.rabbitmq_port,
         virtual_host=settings.rabbitmq_vhost,
         credentials=credentials,
+        ssl_options=ssl_options,
         heartbeat=60,
         blocked_connection_timeout=30,
     )
@@ -119,6 +122,48 @@ class RabbitCommandConsumer:
             finally:
                 if connection and connection.is_open:
                     connection.close()
+
+    def run_batch(self, max_messages: int, idle_timeout_seconds: float) -> int:
+        processed = 0
+        deadline = time.monotonic() + idle_timeout_seconds
+        while processed < max_messages and time.monotonic() < deadline:
+            connection = None
+            handled = 0
+            try:
+                connection = pika.BlockingConnection(_parameters(self._settings))
+                channel = connection.channel()
+                declare_topology(channel)
+                channel.basic_qos(prefetch_count=self._settings.rabbitmq_prefetch)
+
+                def on_message(
+                    callback_channel: pika.adapters.blocking_connection.BlockingChannel,
+                    method: pika.spec.Basic.Deliver,
+                    properties: pika.spec.BasicProperties,
+                    body: bytes,
+                ) -> None:
+                    nonlocal handled
+                    self._on_message(callback_channel, method, properties, body)
+                    handled += 1
+                    if handled >= max_messages - processed:
+                        callback_channel.stop_consuming()
+
+                channel.basic_consume(
+                    queue=topology.SCRAPE_REQUESTED_QUEUE,
+                    on_message_callback=on_message,
+                )
+                connection.call_later(max(1.0, deadline - time.monotonic()), channel.stop_consuming)
+                LOGGER.info("Waiting up to %.0fs for %s scrape commands", idle_timeout_seconds, max_messages - processed)
+                channel.start_consuming()
+                processed += handled
+            except KeyboardInterrupt:
+                raise
+            except pika.exceptions.AMQPError:
+                LOGGER.exception("RabbitMQ consumer connection failed; retrying in 5 seconds")
+                time.sleep(min(5.0, max(0.0, deadline - time.monotonic())))
+            finally:
+                if connection and connection.is_open:
+                    connection.close()
+        return processed
 
     def _on_message(
         self,

@@ -11,6 +11,7 @@ class Settings:
     rabbitmq_user: str = "app_user"
     rabbitmq_password: str = "change_me_locally"
     rabbitmq_vhost: str = "/"
+    rabbitmq_ssl: bool = False
     rabbitmq_prefetch: int = 1
     http_timeout_seconds: float = 20.0
     http_retries: int = 2
@@ -29,6 +30,7 @@ class Settings:
             rabbitmq_user=os.getenv("RABBITMQ_USER", cls.rabbitmq_user),
             rabbitmq_password=os.getenv("RABBITMQ_PASSWORD", cls.rabbitmq_password),
             rabbitmq_vhost=os.getenv("RABBITMQ_VHOST", cls.rabbitmq_vhost),
+            rabbitmq_ssl=os.getenv("RABBITMQ_SSL_ENABLED", "false").lower() in {"1", "true", "yes"},
             rabbitmq_prefetch=int(os.getenv("SCRAPER_RABBITMQ_PREFETCH", str(cls.rabbitmq_prefetch))),
             http_timeout_seconds=float(os.getenv("SCRAPER_HTTP_TIMEOUT_SECONDS", str(cls.http_timeout_seconds))),
             http_retries=int(os.getenv("SCRAPER_HTTP_RETRIES", str(cls.http_retries))),

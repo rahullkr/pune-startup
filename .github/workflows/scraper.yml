@@ -1,0 +1,83 @@
+name: Scrape jobs
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pune-startup-scraper
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scraper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Request scrape runs
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          base = os.environ["API_BASE_URL"].rstrip("/")
+          key = os.environ["ADMIN_API_KEY"]
+
+
+          def request(url, method="GET"):
+              req = urllib.request.Request(
+                  url,
+                  method=method,
+                  headers={"X-Admin-Key": key, "Accept": "application/json"},
+              )
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  return json.load(response)
+
+
+          sources = None
+          for attempt in range(6):
+              try:
+                  sources = request(
+                      f"{base}/admin/scraping-sources"
+                      "?enabled=true&permissionStatus=APPROVED&size=100"
+                  )
+                  break
+              except Exception as exc:
+                  if attempt == 5:
+                      raise
+                  print(f"API not ready ({exc}); retrying in 10 seconds")
+                  time.sleep(10)
+
+          for item in sources.get("content", []):
+              try:
+                  run = request(f"{base}/admin/scraping-sources/{item['id']}/runs", "POST")
+                  print(f"Requested run {run['id']} for {item['sourceName']}")
+              except urllib.error.HTTPError as exc:
+                  print(f"Skipping {item['sourceName']}: HTTP {exc.code}")
+          PY
+      - name: Run scraper worker
+        env:
+          SCRAPER_REQUIRE_ENV: "true"
+          RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+          RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_VHOST: ${{ secrets.RABBITMQ_VHOST }}
+          RABBITMQ_SSL_ENABLED: "true"
+          SCRAPER_MAX_MESSAGES: "10"
+          SCRAPER_IDLE_TIMEOUT_SECONDS: "180"
+        run: python -m app.main
