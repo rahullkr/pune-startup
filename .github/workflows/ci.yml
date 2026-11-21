@@ -9,6 +9,8 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_API_VERSION: "1.41"
     defaults:
       run:
         working-directory: backend
